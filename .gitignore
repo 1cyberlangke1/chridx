@@ -1,0 +1,26 @@
+# 构建产物
+build/
+out/
+*.exe
+*.obj
+*.lib
+*.dll
+*.pdb
+*.ilk
+*.exp
+*.log
+compile_commands.json
+.cache/
+
+# 编辑器 / IDE
+.vscode/
+.idea/
+.clangd
+
+# 本地 AI 配置 + 本地 CMake preset（不污染仓库）
+AGENTS.md
+CLAUDE.md
+CMakeUserPresets.json
+HANDOFF.md
+PLAN*.md
+.claude/
