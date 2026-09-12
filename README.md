@@ -34,6 +34,71 @@ cmake --build --preset default
 ctest --preset default
 ```
 
+## 用法
+
+```cpp
+#include "chridx/char_index.hpp"
+
+#include <cstdint>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+
+int main() {
+    std::string text = "a💚b中é";
+
+    // 构造只接受 std::string_view（这段内存不归索引，生命周期由调用方负责）
+    chridx::char_index<> idx{std::string_view{text}};
+
+    std::cout << idx.size() << "\n";   // 5 个字符
+    std::cout << idx[1] << "\n";       // 💚 —— 切片是原串的子视图，不拷贝
+    std::cout << idx(2) << "\n";       // 5  —— 第 3 个字符的首字节下标
+
+    // 越界：at / index_at 抛 std::out_of_range；[] / () 不检查（同 STL，属 UB）
+    try {
+        idx.at(99);
+    } catch (const std::out_of_range& e) {
+        std::cout << e.what() << "\n";
+    }
+
+    // 只读随机访问迭代器：range-for 直接拿到每个字符的切片
+    for (std::string_view ch : idx) {
+        std::cout << ch;
+    }
+    std::cout << "\n";
+
+    // 只支持 ++ / -- 的双向迭代器：顺序遍历每步 O(1)
+    for (auto it = idx.bidirectional_begin(); it != idx.bidirectional_end(); ++it) {
+        std::cout << *it;
+    }
+    std::cout << "\n";
+
+    // 尾后迭代器往回走：-- 一次就是最后一个字符
+    auto it = idx.bidirectional_end();
+    --it;
+    std::cout << *it << "\n";          // é
+
+    // 模板参数换溢出点计数的宽度：窄 T 省内存，装不下时构造抛 std::length_error
+    chridx::char_index<std::uint8_t> narrow{std::string_view{"a💚b"}};
+    std::cout << narrow(2) << "\n";    // 5
+    return 0;
+}
+```
+
+输出（实测）：
+
+```
+5
+💚
+5
+chridx::at: char index 99 is out of range (size() == 5)
+a💚b中é
+a💚b中é
+é
+5
+```
+
 ## 设计要点
 
 - UTF-8 每个字符最多 4 字节，所以「字节下标 − 字符下标」这个偏移单调不减、每步最多 +3。
